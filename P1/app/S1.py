@@ -34,51 +34,38 @@ class Converter:
     
     @staticmethod
     def serpentine(matrix):
-        """Performs serpentine traversal on a 2D matrix."""
-        n = matrix.shape[0]  
-        result = [None] * (n * n)  
-        
-        a = 0  
-        i = 0 
-        j = 0 
-        result[a] = matrix[i, j]  # First value
-        
-        while a < n * n - 1:  
-            # Step 1: Move right
-            if j == n - 1:  
-                i += 1
-            else:
-                j += 1
+        size = matrix.shape[0]
+        serpentine_list = []
+        row, col = 0, 0
 
-            a += 1
-            if a < n * n:
-                result[a] = matrix[i, j]
-            
-            # Step 2: Diagonal down to the left
-            while i + 1 < n and j - 1 >= 0 and a < n * n - 1:
-                i += 1
-                j -= 1
-                a += 1
-                result[a] = matrix[i, j]
-            
-            # Step 3: Move down
-            if i == n - 1:  
-                j += 1
-            else:
-                i += 1
+        while len(serpentine_list) < size * size:
+            # Move right or down
+            serpentine_list.append(matrix[row, col])
+            if col < size - 1 and (row == 0 or (row > 0 and (row + col) % 2 == 0)):
+                col += 1
+            elif row < size - 1:
+                row += 1
 
-            a += 1
-            if a < n * n:
-                result[a] = matrix[i, j]
-            
-            # Step 4: Diagonal up to the right
-            while j + 1 < n and i - 1 >= 0 and a < n * n - 1:
-                i -= 1
-                j += 1
-                a += 1
-                result[a] = matrix[i, j]
-        
-        return result
+            # Traverse diagonally down-left
+            while row < size - 1 and col > 0 and (row + col) % 2 == 1:
+                serpentine_list.append(matrix[row, col])
+                row += 1
+                col -= 1
+
+            # Move down or right
+            serpentine_list.append(matrix[row, col])
+            if row < size - 1 and (col == 0 or (col > 0 and (row + col) % 2 == 1)):
+                row += 1
+            elif col < size - 1:
+                col += 1
+
+            # Traverse diagonally up-right
+            while col < size - 1 and row > 0 and (row + col) % 2 == 0:
+                serpentine_list.append(matrix[row, col])
+                row -= 1
+                col += 1
+
+        return serpentine_list
     
     @staticmethod
     def compress_to_bw(input_image_path, output_image_path):
