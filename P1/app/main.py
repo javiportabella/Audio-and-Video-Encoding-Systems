@@ -24,8 +24,13 @@ async def root():
             <h1>Welcome to the Image Processor API</h1>
             <p>Use the available endpoints to resize or convert images.</p>
             <ul>
-                <li><strong>/resize_image</strong>: Resize an image</li>
-                <li><strong>/compress_to_bw</strong>: Convert an image to black-and-white</li>
+                <li><strong>Convert RGB to YUB</strong>: Converts three RGB values into YUB values - Interactive</li>
+                <li><strong>Convert YUB to RGB</strong>: Converts three YUB values into RGB values - Interactive</li>
+                <li><strong>Resize image</strong>: Resizes an image - Interactive</li>
+                <li><strong>Serpentine</strong>: Returns a matrix order in a serpentine way</li>
+                <li><strong>Compress to bw</strong>: Converts an image to black-and-white - Interactive</li>
+                <li><strong>Apply DCT and IDCT</strong>: Applies DCT and IDCT to a matrix </li>
+                <li><strong>Apply DWT and IDWT</strong>: Applies DWT and IDWT to a matrix </li>
             </ul>
         </body>
     </html>
@@ -68,24 +73,21 @@ async def resize_image(
 
 @app.get("/serpentine")
 def serpentine_traversal():
-    try:
-        # Example 2D matrix
-        matrix = np.array([
-            [1, 2, 3, 4],
-            [5, 6, 7, 8],
-            [9, 10, 11, 12],
-            [13, 14, 15, 16]
-        ])
-        
-        # Apply serpentine traversal
-        result = Converter.serpentine(matrix)
-        
-        return {
-            "original_matrix": matrix.tolist(),
-            "serpentine_result": result
-        }
-    except Exception as e:
-        return {"error": str(e)}  # Return the error as a response
+    # Example 2D matrix
+    matrix = np.array([
+        [1, 2, 3, 4],
+        [5, 6, 7, 8],
+        [9, 10, 11, 12],
+        [13, 14, 15, 16]
+    ])
+    
+    # Apply serpentine traversal
+    result = Converter.serpentine(matrix)
+    
+    return {
+        "original_matrix": matrix.tolist(),
+        "serpentine_result": result
+    }
 
 
 @app.post("/compress_to_bw")
@@ -153,7 +155,7 @@ def apply_dwt_and_idwt():
     ])
     
     # Apply DWT and IDWT on 2D data (decompose and reconstruct)
-    dwt_2d = DWTConverter.apply_dwt(data_2d.tolist())  # Convert to list for the function
+    dwt_2d = DWTConverter.apply_dwt(data_2d)
     idwt_2d = DWTConverter.apply_idwt(dwt_2d)
 
     return {
