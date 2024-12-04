@@ -8,7 +8,7 @@ if defined _OLD_CODEPAGE (
     "%SystemRoot%\System32\chcp.com" 65001 > nul
 )
 
-set VIRTUAL_ENV=C:\Users\javie\OneDrive\Escritorio\Uni\Quart\1r trimestre\Sistemes de Codificació d'Àudio i Video\practice1\venv
+set VIRTUAL_ENV=C:\Users\34609\Documents\GitHub\Audio-and-Video-Encoding-Systems\S2\venv
 
 if not defined PROMPT set PROMPT=$P$G
 
