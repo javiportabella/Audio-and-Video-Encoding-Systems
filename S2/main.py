@@ -120,51 +120,52 @@ async def read_video_info(file: UploadFile):
 
 
 @app.post("/create_bbb_container/")
-async def create_bbb_container(file: UploadFile, output_name: str = Form(None)):
+async def create_bbb_container(uploaded_file: UploadFile, container_name: str = Form(None)):
     """
-    Create a new Big Buck Bunny (BBB) container fulfilling specific requirements:
-    - Cut BBB into a 20-second video.
-    - Export BBB audio tracks in AAC (mono), MP3 (stereo, lower bitrate), and AC3 codecs.
-    - Package everything into a single .mp4 file with the specified output name.
-
-    :param file: Uploaded video file.
-    :param output_name: Desired name for the final packaged video (without extension).
-    :return: JSON response with output path.
+    - Cuts the input video to 20 seconds.
+    - Extract audio tracks in AAC, MP3, and AC3 formats.
+    - Combine all into a single MP4 file.
+    
+    :param uploaded_file: The uploaded video file to process.
+    :param container_name: Name for the final video (optional).
+    :return: The final processed MP4 file.
     """
     try:
-        file_id = str(uuid4())
-        input_path = f"processed/{file_id}_{file.filename}"
+        # Generate a unique identifier to avoid overwriting files
+        unique_id = str(uuid4())
 
-        with open(input_path, "wb") as f:
-            f.write(await file.read())
+        # Save the uploaded file locally in the 'processed' folder
+        saved_path = f"processed/{unique_id}_{uploaded_file.filename}"
+        with open(saved_path, "wb") as temp_file:
+            temp_file.write(await uploaded_file.read())
 
-        # If output name is not provided, fallback to default naming convention
-        if not output_name:
-            output_name = f"bbb_container_{file_id}"
+        # Use a default name if no custom name is provided
+        if not container_name:
+            container_name = f"container_{unique_id}"
 
-        # Define paths for outputs
-        temp_video = f"processed/{output_name}_20s.mp4"
-        aac_audio = f"processed/{output_name}_audio.aac"
-        mp3_audio = f"processed/{output_name}_audio.mp3"
-        ac3_audio = f"processed/{output_name}_audio.ac3"
-        final_output = f"processed/{output_name}_container.mp4"
+        # Paths for intermediate and final outputs
+        trimmed_video = f"processed/{container_name}_20s.mp4"
+        audio_aac = f"processed/{container_name}_audio.aac"
+        audio_mp3 = f"processed/{container_name}_audio.mp3"
+        audio_ac3 = f"processed/{container_name}_audio.ac3"
+        final_video = f"processed/{container_name}_final.mp4"
 
-        # Cut video to 20 seconds
-        subprocess.run(f"ffmpeg -i {input_path} -t 20 {temp_video}", shell=True)
+        # Trim the video to 20 seconds
+        subprocess.run(f"ffmpeg -i {saved_path} -t 20 {trimmed_video}", shell=True)
 
-        # Export audio in various formats
-        subprocess.run(f"ffmpeg -i {temp_video} -vn -ac 1 {aac_audio}", shell=True)
-        subprocess.run(f"ffmpeg -i {temp_video} -vn -b:a 128k {mp3_audio}", shell=True)
-        subprocess.run(f"ffmpeg -i {temp_video} -vn -c:a ac3 {ac3_audio}", shell=True)
+        # Extract audio in different formats
+        subprocess.run(f"ffmpeg -i {trimmed_video} -vn -ac 1 {audio_aac}", shell=True)  # AAC (mono)
+        subprocess.run(f"ffmpeg -i {trimmed_video} -vn -b:a 128k {audio_mp3}", shell=True)  # MP3 (stereo, 128k bitrate)
+        subprocess.run(f"ffmpeg -i {trimmed_video} -vn -c:a ac3 {audio_ac3}", shell=True)  # AC3 format
 
-        # Package everything into a single MP4
+        # Combine everything into a single MP4 container
         subprocess.run(
-            f"ffmpeg -i {temp_video} -i {aac_audio} -i {mp3_audio} -i {ac3_audio} -map 0:v -map 1:a -map 2:a -map 3:a {final_output}",
+            f"ffmpeg -i {trimmed_video} -i {audio_aac} -i {audio_mp3} -i {audio_ac3} -map 0:v -map 1:a -map 2:a -map 3:a {final_video}",
             shell=True,
         )
 
         # Return the final processed video file
-        return FileResponse(final_output, media_type="video/mp4")
+        return FileResponse(final_video, media_type="video/mp4")
 
     except ffmpeg.Error as e:
         error_message = e.stderr.decode()
@@ -172,30 +173,32 @@ async def create_bbb_container(file: UploadFile, output_name: str = Form(None)):
     except Exception as e:
         return JSONResponse(content={"error": "An unexpected error occurred", "details": str(e)}, status_code=500)
 
+
 @app.post("/read_mp4_tracks/")
-async def read_mp4_tracks(file: UploadFile):
+async def read_mp4_tracks(uploaded_file: UploadFile):
     """
     Reads the number of tracks (audio and video) in an MP4 container.
-    :param file: Uploaded MP4 file.
-    :return: JSON response with the number of tracks (audio/video).
+    
+    :param uploaded_file: The uploaded MP4 file to analyze.
+    :return: returns the number of tracks (audio/video).
     """
     try:
-        # Save the uploaded file to a temporary location
-        file_id = str(uuid4())
-        input_path = f"processed/{file_id}_{file.filename}"
+        # Save the uploaded file locally
+        unique_id = str(uuid4())
+        file_path = f"processed/{unique_id}_{uploaded_file.filename}"
 
-        with open(input_path, "wb") as f:
-            f.write(await file.read())
+        with open(file_path, "wb") as temp_file:
+            temp_file.write(await uploaded_file.read())
 
-        # Use FFmpeg to probe the file and get metadata
-        probe = ffmpeg.probe(input_path)
+        # Probe the file to get metadata
+        probe = ffmpeg.probe(file_path)
 
         # Get the streams (audio, video, etc.)
         streams = probe.get("streams", [])
         
-        # Count the number of tracks
-        num_video_tracks = len([s for s in streams if s.get("codec_type") == "video"])
-        num_audio_tracks = len([s for s in streams if s.get("codec_type") == "audio"])
+        # Count the video and audio tracks
+        num_video_tracks = len([stream for stream in streams if stream.get("codec_type") == "video"])
+        num_audio_tracks = len([stream for stream in streams if stream.get("codec_type") == "audio"])
 
         total_tracks = num_video_tracks + num_audio_tracks
 
@@ -211,74 +214,86 @@ async def read_mp4_tracks(file: UploadFile):
         return JSONResponse(content={"error": "FFmpeg failed to extract track info", "details": error_message}, status_code=400)
     except Exception as e:
         return JSONResponse(content={"error": "An unexpected error occurred", "details": str(e)}, status_code=500)
-    
+
 @app.post("/show_macroblocks_motion_vectors/")
-async def show_macroblocks_motion_vectors(file: UploadFile):
+async def show_macroblocks_motion_vectors(uploaded_file: UploadFile, container_name: str = Form(None)):
     """
-    Generate a video showing the macroblocks and motion vectors.
-    :param file: Uploaded video file.
+    Generates a video showing the macroblocks and motion vectors.
+    
+    :param uploaded_file: The uploaded video file to process.
+    :param container_name: Desired name for the processed video (optional).
     :return: Processed video showing motion vectors and macroblocks.
     """
     try:
-        # Save the uploaded file to a temporary location
-        file_id = str(uuid4())
-        input_path = f"processed/{file_id}_{file.filename}"
+        # Generate a unique file path for saving the uploaded video
+        unique_id = str(uuid4())
+        input_file_path = f"processed/{unique_id}_{uploaded_file.filename}"
 
-        # Save the file locally
-        with open(input_path, "wb") as f:
-            f.write(await file.read())
+        # Save the uploaded file locally
+        with open(input_file_path, "wb") as temp_file:
+            temp_file.write(await uploaded_file.read())
 
-        # Output path for the processed video
-        output_path = f"processed/{file_id}_macroblocks_motion_vectors.mp4"
+        # Use a default name if no custom name is provided
+        if not container_name:
+            container_name = f"macroblocks_motion_{unique_id}"
 
-        # FFmpeg command to visualize macroblocks and motion vectors
-        # `codecview=mv=pf+bf+bb` displays the motion vectors
-        ffmpeg.input(input_path).output(output_path, vf='codecview=mv=pf+bf+bb').run()
+        # Path to save the processed video showing motion vectors
+        output_file_path = f"processed/{container_name}_motion_vectors.mp4"
 
-        return {"message": "Video processed successfully!", "output_file": output_path}
+        # FFmpeg command to generate motion vectors and macroblocks in the video
+        ffmpeg_cmd = f"ffmpeg -flags2 +export_mvs -i {input_file_path} -vf codecview=mv=pf+bf+bb {output_file_path}"
+        
+        # Run the FFmpeg command
+        subprocess.run(ffmpeg_cmd, shell=True, check=True)
+
+        return {"message": "Video processed successfully!", "output_file": output_file_path}
+
+    except subprocess.CalledProcessError as e:
+        return {"error": f"FFmpeg command failed with error: {str(e)}"}
     except Exception as e:
         return {"error": str(e)}
-    
+
+
 @app.post("/show_yuv_histogram/")
-async def show_yuv_histogram(file: UploadFile):
+async def show_yuv_histogram(uploaded_file: UploadFile, container_name: str = Form(None)):
     """
     Generate a video showing the YUV histograms of the input video.
-    :param file: Uploaded video file.
+    
+    :param uploaded_file: The uploaded video file to process.
+    :param container_name: Desired name for the processed video (optional).
     :return: Processed video showing the YUV histograms.
     """
     try:
-        # Save the uploaded file to a temporary location
-        file_id = str(uuid4())
-        input_path = f"processed/{file_id}_{file.filename}"
+        # Generate a unique file path for saving the uploaded video
+        unique_id = str(uuid4())
+        input_file_path = f"processed/{unique_id}_{uploaded_file.filename}"
 
-        # Save the file locally
-        with open(input_path, "wb") as f:
-            f.write(await file.read())
+        # Save the uploaded file locally
+        with open(input_file_path, "wb") as temp_file:
+            temp_file.write(await uploaded_file.read())
 
-        # Output path for the processed video
-        output_path = f"processed/{file_id}_yuv_histograms.mp4"
+        # Use a default name if no custom name is provided
+        if not container_name:
+            container_name = f"yuv_histogram_{unique_id}"
 
-        # Apply histogram filter
-        (
-            ffmpeg
-            .input(input_path)
-            .output(
-                output_path,
-                vf="histogram=display_mode=stack",
-                vcodec="libx264",  # Explicitly set the codec
-                pix_fmt="yuv420p",  # Ensure compatibility with MP4
-                preset="fast"  # Optional: adjust speed/quality tradeoff
-            )
-            .overwrite_output()
-            .run()
-        )
+        # Path to save the processed video showing YUV histograms
+        output_file_path = f"processed/{container_name}_histograms.mp4"
 
-        return {"message": "Video processed successfully!", "output_file": output_path}
+        # FFmpeg command to generate YUV histograms
+        ffmpeg.input(input_file_path).output(
+            output_file_path,
+            vf="histogram=display_mode=stack",
+            vcodec="libx264",  # Explicit codec to ensure compatibility
+            pix_fmt="yuv420p",  # Set pixel format for MP4 compatibility
+            preset="fast"  # Speed/quality tradeoff setting
+        ).overwrite_output().run()
+
+        return {"message": "Video processed successfully!", "output_file": output_file_path}
+
     except ffmpeg.Error as e:
         return {"error": e.stderr.decode()}
     except Exception as e:
         return {"error": str(e)}
-
 
 
 @app.get("/Download")
