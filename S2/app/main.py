@@ -20,14 +20,8 @@ os.makedirs(PROCESSED_DIR, exist_ok=True)
 @app.post("/Modify Resolution")
 async def convert_resolution(request: Request, file: UploadFile, width: int = Form(...), height: int = Form(...)):
     """
-    - Allows you to modify the resolution of an uploaded video file.
-    - You can provide the desired width and height for the output video.
-    - The output video will be processed and the new resolution will be applied.
-    
-    :param file: The uploaded video file to process.
-    :param width: The desired width for the output video.
-    :param height: The desired height for the output video.
-    :return: The processed video with the modified resolution and a download link.
+    This endpoint modifies the resolution of an uploaded video file by applying the specified width and height, 
+    returning the processed video.
     """
     try:
         file_id = str(uuid4())
@@ -63,12 +57,8 @@ async def convert_resolution(request: Request, file: UploadFile, width: int = Fo
 @app.post("/Modify the Chroma Subsampling")
 async def convert_chroma(request: Request, file: UploadFile, chroma_format: str = Form(...)):
     """
-    - Allows you to change the chroma subsampling format of an uploaded video.
-    - You can select different chroma formats (e.g., YUV420, YUV422, YUV444) for the output video.
-    
-    :param file: The uploaded video file to process.
-    :param chroma_format: The desired chroma subsampling format.
-    :return: The processed video with the specified chroma format and a download link.
+    This endpoint changes the chroma subsampling format of an uploaded video to the specified format, 
+    returning the processed video.
     """
     try:
         file_id = str(uuid4())
@@ -104,11 +94,8 @@ async def convert_chroma(request: Request, file: UploadFile, chroma_format: str 
 @app.post("/Read video info/")
 async def read_video_info(request: Request, file: UploadFile):
     """
-    - Allows you to extract and display the metadata of an uploaded video file.
-    - You will get information such as duration, bitrate, width, height, codec, and format.
-    
-    :param file: The uploaded video file to analyze.
-    :return: The extracted video metadata and related information.
+    This endpoint extracts and displays metadata from an uploaded video file, 
+    including details like duration, bitrate, resolution, codec, and format.
     """
     try:
         file_id = str(uuid4())
@@ -149,13 +136,8 @@ async def read_video_info(request: Request, file: UploadFile):
 @app.post("/create_bbb_container/")
 async def create_bbb_container(request: Request, uploaded_file: UploadFile, container_name: str = Form(None)):
     """
-    - Cuts the input video to 20 seconds.
-    - Extract audio tracks in AAC, MP3, and AC3 formats.
-    - Combine all into a single MP4 file.
-    
-    :param uploaded_file: The uploaded video file to process.
-    :param container_name: Name for the final video (optional).
-    :return: The final processed MP4 file and download links for all files.
+    This endpoint trims the input video to 20 seconds, extracts audio in multiple formats (AAC, MP3, AC3), 
+    and combines them into a single MP4 file. Where you can download each process.
     """
     try:
         # Generate a unique identifier to avoid overwriting files
@@ -222,11 +204,8 @@ async def create_bbb_container(request: Request, uploaded_file: UploadFile, cont
 @app.post("/read_mp4_tracks/")
 async def read_mp4_tracks(request: Request, uploaded_file: UploadFile):
     """
-    - Allows you to extract track information from an MP4 file.
-    - The function counts the number of video and audio tracks and returns a summary.
-    
-    :param uploaded_file: The uploaded MP4 file to analyze.
-    :return: The track info, including the number of video and audio tracks.
+    This endpoint extracts and summarizes track information from an uploaded MP4 file, 
+    returning the count of video and audio tracks present.
     """
     try:
         unique_id = str(uuid4())
